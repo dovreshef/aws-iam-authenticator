@@ -159,7 +159,7 @@ func (c *Server) getHandler() *handler {
 		lowercaseRoleMap: make(map[string]config.RoleMapping),
 		lowercaseUserMap: make(map[string]config.UserMapping),
 		accountMap:       make(map[string]bool),
-		verifier:         token.NewVerifier(c.ClusterID),
+		verifier:         token.NewVerifier(c.ClusterID, c.MaxSessionValidity),
 		metrics:          createMetrics(),
 		ec2Provider:      newEC2Provider(c.ServerEC2DescribeInstancesRoleARN),
 	}

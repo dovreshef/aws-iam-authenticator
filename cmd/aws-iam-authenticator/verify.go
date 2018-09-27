@@ -35,6 +35,7 @@ var verifyCmd = &cobra.Command{
 		tok := viper.GetString("token")
 		output := viper.GetString("output")
 		clusterID := viper.GetString("clusterID")
+		maxSessionValidity := viper.GetDuration("maxSessionValidity")
 
 		if tok == "" {
 			fmt.Fprintf(os.Stderr, "error: token not specified\n")
@@ -48,7 +49,7 @@ var verifyCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		id, err := token.NewVerifier(clusterID).Verify(tok)
+		id, err := token.NewVerifier(clusterID, maxSessionValidity).Verify(tok)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not verify token: %v\n", err)
 			os.Exit(1)
@@ -67,6 +68,7 @@ var verifyCmd = &cobra.Command{
 }
 
 func init() {
+	viper.SetDefault("maxSessionValidity", DefaultMaxSessionValidity)
 	rootCmd.AddCommand(verifyCmd)
 	verifyCmd.Flags().StringP("token", "t", "", "Verify this token")
 	verifyCmd.Flags().StringP("output", "o", "", "Output format. Only `json` is supported currenty.")

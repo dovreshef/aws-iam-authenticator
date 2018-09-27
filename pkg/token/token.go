@@ -138,12 +138,14 @@ type Generator interface {
 
 type generator struct {
 	forwardSessionName bool
+	sessionDuration    time.Duration
 }
 
 // NewGenerator creates a Generator and returns it.
-func NewGenerator(forwardSessionName bool) (Generator, error) {
+func NewGenerator(forwardSessionName bool, sessionDuration time.Duration) (Generator, error) {
 	return generator{
 		forwardSessionName: forwardSessionName,
+		sessionDuration:    sessionDuration,
 	}, nil
 }
 
@@ -185,7 +187,9 @@ func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess 
 	// if a roleARN was specified, replace the STS client with one that uses
 	// temporary credentials from that role.
 	if roleARN != "" {
-		sessionSetter := func(provider *stscreds.AssumeRoleProvider) {}
+		sessionSetter := func(provider *stscreds.AssumeRoleProvider) {
+			provider.Duration = g.sessionDuration
+		}
 		if g.forwardSessionName {
 			// If the current session is already a federated identity, carry through
 			// this session name onto the new session to provide better debugging
@@ -197,6 +201,7 @@ func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess 
 
 			userIDParts := strings.Split(*resp.UserId, ":")
 			sessionSetter = func(provider *stscreds.AssumeRoleProvider) {
+				provider.Duration = g.sessionDuration
 				if len(userIDParts) == 2 {
 					provider.RoleSessionName = userIDParts[1]
 				}
@@ -220,7 +225,7 @@ func (g generator) GetWithSTS(clusterID string, stsAPI *sts.STS) (string, error)
 	request.HTTPRequest.Header.Add(clusterIDHeader, clusterID)
 
 	// sign the request
-	presignedURLString, err := request.Presign(60 * time.Second)
+	presignedURLString, err := request.Presign(g.sessionDuration)
 	if err != nil {
 		return "", err
 	}
@@ -250,15 +255,17 @@ type Verifier interface {
 }
 
 type tokenVerifier struct {
-	client    *http.Client
-	clusterID string
+	client             *http.Client
+	clusterID          string
+	maxSessionValidity time.Duration
 }
 
 // NewVerifier creates a Verifier that is bound to the clusterID and uses the default http client.
-func NewVerifier(clusterID string) Verifier {
+func NewVerifier(clusterID string, maxSessionValidity time.Duration) Verifier {
 	return tokenVerifier{
-		client:    http.DefaultClient,
-		clusterID: clusterID,
+		client:             http.DefaultClient,
+		clusterID:          clusterID,
+		maxSessionValidity: maxSessionValidity,
 	}
 }
 
@@ -318,7 +325,7 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	}
 
 	expires, err := strconv.Atoi(queryParamsLower.Get("x-amz-expires"))
-	if err != nil || expires < 0 || expires > 60 {
+	if err != nil || expires < 0 || expires > int(v.maxSessionValidity.Seconds()) {
 		return nil, FormatError{"invalid X-Amz-Expires parameter in pre-signed URL"}
 	}
 

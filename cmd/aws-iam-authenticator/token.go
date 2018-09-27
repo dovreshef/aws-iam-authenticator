@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/token"
 
@@ -35,6 +36,7 @@ var tokenCmd = &cobra.Command{
 		clusterID := viper.GetString("clusterID")
 		tokenOnly := viper.GetBool("tokenOnly")
 		forwardSessionName := viper.GetBool("forwardSessionName")
+		sessionDuration := viper.GetDuration("duration")
 
 		if clusterID == "" {
 			fmt.Fprintf(os.Stderr, "Error: cluster ID not specified\n")
@@ -44,7 +46,7 @@ var tokenCmd = &cobra.Command{
 
 		var tok string
 		var err error
-		gen, err := token.NewGenerator(forwardSessionName)
+		gen, err := token.NewGenerator(forwardSessionName, sessionDuration)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not get token: %v\n", err)
 			os.Exit(1)
@@ -74,9 +76,10 @@ func init() {
 	tokenCmd.Flags().Bool("forward-session-name",
 		false,
 		"Enable mapping a federated sessions caller-specified-role-name attribute onto newly assumed sessions. NOTE: Only applicable when a new role is requested via --role")
+	tokenCmd.Flags().DurationP("duration", "d", time.Duration(15*time.Minute), "Minutes that the token is valid for.")
 	viper.BindPFlag("role", tokenCmd.Flags().Lookup("role"))
 	viper.BindPFlag("tokenOnly", tokenCmd.Flags().Lookup("token-only"))
 	viper.BindPFlag("forwardSessionName", tokenCmd.Flags().Lookup("forward-session-name"))
+	viper.BindPFlag("duration", tokenCmd.Flags().Lookup("duration"))
 	viper.BindEnv("role", "DEFAULT_ROLE")
-
 }

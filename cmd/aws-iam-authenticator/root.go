@@ -78,6 +78,7 @@ func initConfig() {
 func getConfig() (config.Config, error) {
 	config := config.Config{
 		ClusterID:                         viper.GetString("clusterID"),
+		MaxSessionValidity:                viper.GetDuration("server.maxSessionValidity"),
 		ServerEC2DescribeInstancesRoleARN: viper.GetString("server.ec2DescribeInstancesRoleARN"),
 		HostPort:               viper.GetInt("server.port"),
 		Hostname:               viper.GetString("server.hostname"),

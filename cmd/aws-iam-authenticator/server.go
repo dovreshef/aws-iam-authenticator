@@ -17,6 +17,8 @@ limitations under the License.
 package main
 
 import (
+	"time"
+
 	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/server"
 
 	"github.com/sirupsen/logrus"
@@ -26,6 +28,9 @@ import (
 
 // DefaultPort is the default localhost port (chosen randomly).
 const DefaultPort = 21362
+
+// DefaultMaxSessionValidity is the default maximum duration a user can request a token for
+const DefaultMaxSessionValidity = time.Duration(60) * time.Minute
 
 // serverCmd represents the server command
 var serverCmd = &cobra.Command{
@@ -45,6 +50,7 @@ var serverCmd = &cobra.Command{
 
 func init() {
 	viper.SetDefault("server.port", DefaultPort)
+	viper.SetDefault("server.maxSessionValidity", DefaultMaxSessionValidity)
 
 	serverCmd.Flags().String("generate-kubeconfig",
 		"/etc/kubernetes/aws-iam-authenticator/kubeconfig.yaml",
